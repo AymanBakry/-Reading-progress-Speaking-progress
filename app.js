@@ -87,14 +87,34 @@
   const full = x => { const d = toD(x); return DAY[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };
   const mid = x => { const d = toD(x); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };
 
-  /* ---------- حفظ الحالات ---------- */
-    let local = {}, storageOK = true;
-  try { local = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { local = {}; storageOK = false; }
+  /* ---------- حفظ الحالات (عدة طبقات احتياطية) ---------- */
+  function readAll() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORE); } catch (e) { /* غير متاح */ }
+    if (!raw) { try { raw = sessionStorage.getItem(STORE); } catch (e) { /* غير متاح */ } }
+    if (!raw && typeof window.name === 'string' && window.name.indexOf('BP:') === 0) raw = window.name.slice(3);
+    try { return JSON.parse(raw || '{}') || {}; } catch (e) { return {}; }
+  }
+  function writeAll(obj) {
+    const str = JSON.stringify(obj);
+    let ok = false;
+    try { localStorage.setItem(STORE, str); ok = true; } catch (e) { /* غير متاح */ }
+    try { sessionStorage.setItem(STORE, str); } catch (e) { /* غير متاح */ }
+    try { window.name = 'BP:' + str; } catch (e) { /* غير متاح */ }
+    return ok;
+  }
+  let local = readAll();
   const getS = id => local[id] || STATUS_DEFAULT[id] || 'none';
   function setS(id, v) {
     local[id] = v;
-    try { localStorage.setItem(STORE, JSON.stringify(local)); storageOK = true; } catch (e) { storageOK = false; }
+    return writeAll(local);
   }
+  function toast(msg, bad) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99;padding:10px 20px;border-radius:99px;font-weight:800;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.3);background:' + (bad ? '#dc2626' : '#16a34a');
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2800);
   }
 
   /* ---------- عناصر الصفحة ---------- */
@@ -229,7 +249,7 @@
       '<div class="tile"><b>📝 التقييم والتغذية الراجعة</b>من ' + mid(dl) + '<small>حتى ' + mid(ev) + '</small></div></div>' +
       (a.note ? '<div class="note">⚠️ ' + a.note + '</div>' : '') + '</section>' +
 
-      ''<section class="panel"><h3>🚦 حالة النشاط</h3><div class="stwrap">' + stBtns + '</div><div class="note">تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع استخدم زر «نسخ كود الحالات للنشر» في القائمة الرئيسية.</div></section>' +
+      '<section class="panel"><h3>🚦 حالة النشاط</h3><div class="stwrap">' + stBtns + '</div><div class="note">تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع استخدم زر «نسخ كود الحالات للنشر» في القائمة الرئيسية.</div></section>' +
       '<section class="panel"><h3>🧭 خطوات التنفيذ</h3><ol class="steps">' + steps + '</ol></section>' +
       '<section class="panel"><h3>💡 نصائح للطالب</h3><ul class="tips">' + TIPS[a.prog].map(t => '<li>' + t + '</li>').join('') + '</ul></section>' +
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
@@ -255,10 +275,11 @@
     if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
     else if (t.dataset.set && curId) {
-      setS(curId, t.dataset.set);
-             if (!storageOK) alert('تنبيه: متصفحك يمنع حفظ الحالة، فستختفي عند إعادة فتح الصفحة. استخدم متصفحًا عاديًا (غير وضع الخصوصية) أو ثبّت الحالة في STATUS_DEFAULT.');
+      const saved = setS(curId, t.dataset.set);
       detail(byId[curId]);
       if (t.dataset.set === 'done') confetti(byId[curId].e);
+      if (saved) toast('✔ تم حفظ الحالة: ' + ST[t.dataset.set].label);
+      else toast('⚠ المتصفح يمنع الحفظ الدائم؛ الحالة محفوظة مؤقتًا في هذه النافذة فقط', true);
     }
     else if (t.dataset.fprog) { fProg = t.dataset.fprog; home(); }
     else if (t.dataset.fst) { fSt = t.dataset.fst; home(); }
@@ -266,6 +287,7 @@
     else if (t.hasAttribute('data-reset')) {
       if (confirm('سيتم مسح الحالات المحفوظة في هذا المتصفح فقط. هل أنت متأكد؟')) {
         local = {};
+        writeAll(local);
         try { localStorage.removeItem(STORE); } catch (e) { /* تجاهل */ }
         home();
       }
@@ -292,5 +314,6 @@
     else prompt('انسخ الكود:', code);
   }
 
-  route();
+  try { route(); }
+  catch (err) { app.innerHTML = '<div class="panel">حدث خطأ في تشغيل المنصة: ' + err.message + '</div>'; }
 })();
