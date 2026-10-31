@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>منصة Reading & Speaking Progress 2026-2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--c1:#6C63FF;--c2:#FF6584;--c3:#FFC75F;--photo:none;--ink:#1f2340}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;color:var(--ink);min-height:100vh;line-height:1.7}
+button{font-family:inherit}
+
+/* ===== الخلفية المتغيرة حسب النشاط ===== */
+#bg{position:fixed;inset:0;z-index:-3;background-image:var(--photo),linear-gradient(135deg,var(--c1),var(--c2) 55%,var(--c3));background-size:cover;background-position:center}
+#bg::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.62);transition:background .5s}
+body.detail #bg::after{background:rgba(255,255,255,.06)}
+#floaters{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.fl{position:absolute;opacity:.28;animation:float ease-in-out infinite;user-select:none}
+body.detail .fl{opacity:.55}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-34px) rotate(10deg)}}
+
+/* ===== الرأس والتذييل ===== */
+.top{background:linear-gradient(90deg,#4f46e5,#ec4899,#f59e0b);color:#fff;text-align:center;padding:18px 14px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.top small{display:block;opacity:.95;font-size:.95rem}
+.top h1{font-size:clamp(1.3rem,4vw,2.1rem);font-weight:800;text-shadow:0 2px 6px rgba(0,0,0,.25)}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 14px 40px}
+footer{text-align:center;padding:18px 12px 30px;font-size:.9rem;color:#fff;background:rgba(31,35,64,.82)}
+footer b{color:#fde68a}
+
+/* ===== القائمة الرئيسية ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:rgba(255,255,255,.93);border-radius:20px;padding:14px;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.1)}
+.stat b{display:block;font-size:2rem;line-height:1.2}
+.stat span{font-size:.95rem;font-weight:600}
+.progress{position:relative;height:26px;border-radius:99px;background:rgba(255,255,255,.9);margin:14px 0;overflow:hidden;box-shadow:inset 0 2px 6px rgba(0,0,0,.12)}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#a3e635);border-radius:99px;transition:width .6s}
+.progress em{position:absolute;inset:0;text-align:center;font-style:normal;font-weight:800;font-size:.9rem;line-height:26px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{border:0;border-radius:99px;padding:8px 16px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.9);color:var(--ink);box-shadow:0 3px 10px rgba(0,0,0,.1);transition:transform .15s}
+.chip:hover{transform:translateY(-2px)}
+.chip.on{background:linear-gradient(135deg,#6C63FF,#ec4899);color:#fff}
+.sec{margin:22px 0 10px;font-size:1.4rem;font-weight:800;display:flex;align-items:center;gap:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{position:relative;overflow:hidden;border-radius:24px;color:#fff;padding:16px;min-height:185px;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 10px 26px rgba(0,0,0,.2);cursor:pointer;transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;gap:6px}
+.card:hover,.card:focus{transform:translateY(-6px) rotate(-.6deg);box-shadow:0 16px 34px rgba(0,0,0,.28);outline:none}
+.card .ph{position:absolute;inset:0;background-size:cover;background-position:center}
+.card .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,0,0,.25),rgba(0,0,0,.05))}
+.card .big{position:absolute;left:-6px;bottom:-18px;font-size:104px;opacity:.3;transform:rotate(-12deg)}
+.card>*:not(.ph):not(.big){position:relative}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.card .num{background:rgba(255,255,255,.28);padding:2px 12px;border-radius:99px;font-weight:800;font-size:.85rem}
+.card h3{font-size:1.2rem;line-height:1.35;text-shadow:0 2px 6px rgba(0,0,0,.35);text-align:left;margin-top:6px}
+.card p{font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.card .emo{margin-top:auto;font-size:1.4rem;letter-spacing:4px}
+.badge{display:inline-block;padding:2px 11px;border-radius:99px;font-size:.8rem;font-weight:800;white-space:nowrap}
+.s-none{background:#e5e7eb;color:#374151}.s-doing{background:#fde68a;color:#92400e}
+.s-done{background:#bbf7d0;color:#166534}.s-postponed{background:#fecaca;color:#991b1b}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;justify-content:center}
+.btn{border:0;border-radius:16px;padding:10px 20px;font-weight:800;font-size:1rem;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 6px 16px rgba(0,0,0,.22);transition:transform .15s}
+.btn:hover:not([disabled]){transform:translateY(-2px)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.home{background:linear-gradient(135deg,#1f2340,#4f46e5)}
+.btn.gray{background:#475569}
+
+/* ===== صفحة النشاط ===== */
+.nav{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
+.hero{position:relative;overflow:hidden;border-radius:30px;color:#fff;padding:28px 18px;text-align:center;background:linear-gradient(135deg,var(--c1),var(--c2) 60%,var(--c3));box-shadow:0 14px 34px rgba(0,0,0,.28)}
+.hero .ph{position:absolute;inset:0;background-size:cover;background-position:center}
+.hero .ph::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.28)}
+.hero>*:not(.ph){position:relative}
+.hero .prog{display:inline-block;background:rgba(255,255,255,.28);padding:3px 18px;border-radius:99px;font-weight:800}
+.hero h2{font-size:clamp(1.6rem,5vw,2.8rem);font-weight:800;margin:8px 0;text-shadow:0 3px 10px rgba(0,0,0,.4)}
+.hero .fmt{display:inline-block;background:#fff;color:var(--ink);padding:2px 16px;border-radius:99px;font-weight:800;margin-bottom:8px}
+.hero .emo{font-size:2.2rem;letter-spacing:8px;margin:6px 0 10px}
+.panel{background:rgba(255,255,255,.94);border-radius:22px;padding:20px;margin-top:16px;box-shadow:0 8px 22px rgba(0,0,0,.14)}
+.panel h3{margin-bottom:12px;font-size:1.2rem}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.tile{border-radius:18px;padding:14px;background:#fff;border:3px solid var(--c1);text-align:center}
+.tile b{display:block;font-size:1.05rem;margin-bottom:2px}
+.tile small{display:block;color:#64748b}
+.note{margin-top:10px;background:#fff7ed;border:2px dashed #fb923c;border-radius:14px;padding:8px 12px;font-weight:600}
+.stwrap{display:flex;flex-wrap:wrap;gap:10px}
+.stbtn{border:0;border-radius:14px;padding:11px 18px;font-weight:800;cursor:pointer;background:#e5e7eb;color:#374151;transition:transform .15s;font-size:1rem}
+.stbtn:hover{transform:scale(1.05)}
+.stbtn.active.s-none{background:#475569;color:#fff}.stbtn.active.s-doing{background:#f59e0b;color:#fff}
+.stbtn.active.s-done{background:#16a34a;color:#fff}.stbtn.active.s-postponed{background:#dc2626;color:#fff}
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:10px 54px 10px 8px;margin-bottom:8px;background:#fff;border-radius:14px;border-right:6px solid var(--c1)}
+.steps li::before{content:counter(s);position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;text-align:center;line-height:32px;font-weight:800}
+.rub{display:grid;grid-template-columns:minmax(150px,1.2fr) 3fr 44px;gap:10px;align-items:center;margin:8px 0}
+.bar{height:14px;border-radius:99px;background:#e8e8f4;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.tot{text-align:left;font-weight:800;margin-top:6px}
+ul.tips{padding-right:22px}
+.fall{position:fixed;top:-60px;z-index:50;font-size:30px;pointer-events:none;animation:fall 2.4s ease-in forwards}
+@keyframes fall{to{transform:translateY(115vh) rotate(540deg);opacity:.2}}
+@media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}.rub{grid-template-columns:1fr 44px}.rub .bar{grid-column:1/3;order:3}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="floaters"></div>
+
+<header class="top">
+  <small>مملكة البحرين – وزارة التربية والتعليم – مدرسة البلاد القديم الابتدائية الإعدادية للبنين – قسم اللغة الإنجليزية</small>
+  <h1>🎓 منصة أنشطة Reading Progress &amp; Speaking Progress</h1>
+  <small>المرحلة الإعدادية والصف السادس الابتدائي – العام الدراسي 2026-2027</small>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<footer>
+  إعداد: <b>عباس كاظم</b> (المعلم الأول) &nbsp;|&nbsp; المعلم المنفذ: <b>أيمن بكري</b> &nbsp;|&nbsp;
+  المدير المساعد: <b>عبدالله دليم</b> &nbsp;|&nbsp; مدير المدرسة: <b>محمد إبراهيم محمد</b>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
