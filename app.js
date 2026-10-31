@@ -88,12 +88,13 @@
   const mid = x => { const d = toD(x); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };
 
   /* ---------- حفظ الحالات ---------- */
-  let local = {};
-  try { local = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { local = {}; }
+    let local = {}, storageOK = true;
+  try { local = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { local = {}; storageOK = false; }
   const getS = id => local[id] || STATUS_DEFAULT[id] || 'none';
   function setS(id, v) {
     local[id] = v;
-    try { localStorage.setItem(STORE, JSON.stringify(local)); } catch (e) { /* التخزين غير متاح */ }
+    try { localStorage.setItem(STORE, JSON.stringify(local)); storageOK = true; } catch (e) { storageOK = false; }
+  }
   }
 
   /* ---------- عناصر الصفحة ---------- */
@@ -228,7 +229,7 @@
       '<div class="tile"><b>📝 التقييم والتغذية الراجعة</b>من ' + mid(dl) + '<small>حتى ' + mid(ev) + '</small></div></div>' +
       (a.note ? '<div class="note">⚠️ ' + a.note + '</div>' : '') + '</section>' +
 
-      '<section class="panel"><h3>🚦 حالة النشاط</h3><div class="stwrap">' + stBtns + '</div></section>' +
+      ''<section class="panel"><h3>🚦 حالة النشاط</h3><div class="stwrap">' + stBtns + '</div><div class="note">تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع استخدم زر «نسخ كود الحالات للنشر» في القائمة الرئيسية.</div></section>' +
       '<section class="panel"><h3>🧭 خطوات التنفيذ</h3><ol class="steps">' + steps + '</ol></section>' +
       '<section class="panel"><h3>💡 نصائح للطالب</h3><ul class="tips">' + TIPS[a.prog].map(t => '<li>' + t + '</li>').join('') + '</ul></section>' +
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
@@ -255,6 +256,7 @@
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
     else if (t.dataset.set && curId) {
       setS(curId, t.dataset.set);
+             if (!storageOK) alert('تنبيه: متصفحك يمنع حفظ الحالة، فستختفي عند إعادة فتح الصفحة. استخدم متصفحًا عاديًا (غير وضع الخصوصية) أو ثبّت الحالة في STATUS_DEFAULT.');
       detail(byId[curId]);
       if (t.dataset.set === 'done') confetti(byId[curId].e);
     }
