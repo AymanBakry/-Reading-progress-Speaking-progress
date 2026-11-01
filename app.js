@@ -17,7 +17,16 @@
     "S1": "done"
   };
 
+  /* ---------- إعدادات المزامنة بين الأجهزة ---------- */
+  // ضع رابط قاعدة Firebase Realtime Database بين علامتي التنصيص لتظهر الحالات على كل الأجهزة تلقائيًا.
+  // إذا تركته فارغًا تعمل المنصة بدون مزامنة (الحالة تُحفظ على الجهاز فقط).
+  const DB_URL = 'https://reading-and-speaking-plan-default-rtdb.firebaseio.com';
+  const TEACHER_PIN = '1234';   // رمز المعلم لإظهار أزرار تغيير الحالة (غيّره إلى رمز خاص بك)
+  const POLL_MS = 20000;        // تحديث الحالات تلقائيًا كل 20 ثانية
+  const DB = DB_URL ? DB_URL.replace(/\/+$/, '') : '';
+
   const STORE = 'bp_status_2026_v1';
+  const TKEY = 'bp_teacher_2026_v1';
   const ST = {
     none:      { label: 'لم يبدأ',       icon: '⚪' },
     doing:     { label: 'جاري التنفيذ',  icon: '⏳' },
@@ -107,10 +116,54 @@
     return ok;
   }
   let local = readAll();
-  const getS = id => local[id] || STATUS_DEFAULT[id] || 'none';
-  function setS(id, v) {
+  let remote = null;                       // null = لم تُحمَّل بعد من الإنترنت
+  let teacher = false;
+  try { teacher = localStorage.getItem(TKEY) === '1'; } catch (e) { teacher = false; }
+  const canEdit = () => !DB || teacher;
+
+  function getS(id) {
+    if (DB) {
+      if (remote && remote[id]) return remote[id];
+      if (remote === null && local[id]) return local[id];   // نسخة محفوظة عند تعذر الاتصال
+    } else if (local[id]) {
+      return local[id];
+    }
+    return STATUS_DEFAULT[id] || 'none';
+  }
+  async function saveStatus(id, v) {
     local[id] = v;
-    return writeAll(local);
+    const okLocal = writeAll(local);
+    if (!DB) return { local: okLocal, remote: null };
+    if (remote === null) remote = {};
+    remote[id] = v;
+    try {
+      const r = await fetch(DB + '/status/' + id + '.json', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v)
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return { local: okLocal, remote: true };
+    } catch (e) {
+      return { local: okLocal, remote: false };
+    }
+  }
+  let lastSnap = '';
+  async function pull() {
+    if (!DB) return;
+    try {
+      const r = await fetch(DB + '/status.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = (await r.json()) || {};
+      const snap = JSON.stringify(d);
+      const first = remote === null;
+      remote = d;
+      local = Object.assign({}, d);
+      writeAll(local);
+      if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }
+    } catch (e) { /* يستمر بآخر نسخة محفوظة */ }
+  }
+  function refresh() {
+    if (!app.innerHTML) return;
+    if (curId) detail(byId[curId]); else home();
   }
   function toast(msg, bad) {
     const t = document.createElement('div');
@@ -130,8 +183,11 @@
     root.style.setProperty('--c1', g[0]);
     root.style.setProperty('--c2', g[1]);
     root.style.setProperty('--c3', g[2]);
-    root.style.setProperty('--photo', 'none');
     document.body.classList.toggle('detail', isDetail);
+    const key = g.join('|') + '|' + isDetail;
+    if (floaters.dataset.key === key) return;
+    floaters.dataset.key = key;
+    root.style.setProperty('--photo', 'none');
     floaters.innerHTML = '';
     const count = isDetail ? 26 : 14;
     for (let i = 0; i < count; i++) {
@@ -200,8 +256,9 @@
       '<div class="stat"><b>' + cnt.none + '</b><span>⚪ لم يبدأ</span></div></section>' +
       '<div class="progress"><i style="width:' + pct + '%"></i><em>' + pct + '% من الأنشطة العشرين منفذة</em></div>' +
       '<div class="filters">' + progTabs + '</div><div class="filters">' + stTabs + '</div>' + body +
-      '<div class="tools"><button class="btn" data-copy>📋 نسخ كود الحالات للنشر</button>' +
-      '<button class="btn gray" data-reset>🧹 مسح تعديلاتي</button></div>';
+      '<div class="tools">' + (DB
+        ? (teacher ? '<button class="btn gray" data-logout>🔓 خروج المعلم</button>' : '<button class="btn gray" data-login>🔒 دخول المعلم</button>')
+        : '<button class="btn" data-copy>📋 نسخ كود الحالات للنشر</button><button class="btn gray" data-reset>🧹 مسح تعديلاتي</button>') + '</div>';
 
     app.querySelectorAll('.ph').forEach(el => tryPhoto(el.dataset.ph, u => { el.style.backgroundImage = u; }));
   }
@@ -223,6 +280,11 @@
 
     const stBtns = Object.keys(ST).map(k =>
       '<button class="stbtn s-' + k + (s === k ? ' active' : '') + '" data-set="' + k + '">' + ST[k].icon + ' ' + ST[k].label + '</button>').join('');
+    const stPanel = canEdit()
+      ? '<div class="stwrap">' + stBtns + '</div><div class="note">' +
+        (DB ? 'عند الضغط تُحفظ الحالة على الإنترنت وتظهر لكل من يفتح المنصة على أي جهاز.'
+            : 'تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع اضبط DB_URL في app.js.') + '</div>'
+      : '<div class="stwrap"><span class="badge s-' + s + '" style="font-size:1.1rem;padding:6px 18px">' + ST[s].icon + ' ' + ST[s].label + '</span></div>';
 
     const steps = [
       'إطلاق النشاط: نشر مهمة في Teams (Assignments) مع مجلد الموضوع رقم ' + a.n + ' وتعليمات التسجيل، وآخر موعد للتسليم بعد 12 يومًا من الإطلاق.',
@@ -252,7 +314,7 @@
       '<div class="tile"><b>📝 التقييم والتغذية الراجعة</b>من ' + mid(dl) + '<small>حتى ' + mid(ev) + '</small></div></div>' +
       (a.note ? '<div class="note">⚠️ ' + a.note + '</div>' : '') + '</section>' +
 
-      '<section class="panel"><h3>🚦 حالة النشاط</h3><div class="stwrap">' + stBtns + '</div><div class="note">تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع استخدم زر «نسخ كود الحالات للنشر» في القائمة الرئيسية.</div></section>' +
+      '<section class="panel"><h3>🚦 حالة النشاط</h3>' + stPanel + '</section>' +
       '<section class="panel"><h3>🧭 خطوات التنفيذ</h3><ol class="steps">' + steps + '</ol></section>' +
       '<section class="panel"><h3>💡 نصائح للطالب</h3><ul class="tips">' + TIPS[a.prog].map(t => '<li>' + t + '</li>').join('') + '</ul></section>' +
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
@@ -273,16 +335,37 @@
 
   /* ---------- الأحداث ---------- */
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset]');
+    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout]');
     if (!t || t.disabled) return;
     if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
-    else if (t.dataset.set && curId) {
-      const saved = setS(curId, t.dataset.set);
-      detail(byId[curId]);
-      if (t.dataset.set === 'done') confetti(byId[curId].e);
-      if (saved) toast('✔ تم حفظ الحالة: ' + ST[t.dataset.set].label);
-      else toast('⚠ المتصفح يمنع الحفظ الدائم؛ الحالة محفوظة مؤقتًا في هذه النافذة فقط', true);
+    else if (t.dataset.set && curId && canEdit()) {
+      const id = curId, v = t.dataset.set;
+      const p = saveStatus(id, v);
+      detail(byId[id]);
+      if (v === 'done') confetti(byId[id].e);
+      p.then(res => {
+        if (DB) {
+          if (res.remote) toast('✔ تم الحفظ ويظهر الآن على كل الأجهزة: ' + ST[v].label);
+          else toast('⚠ تعذر الاتصال بقاعدة البيانات؛ حُفظت على هذا الجهاز فقط', true);
+        } else if (res.local) toast('✔ تم حفظ الحالة: ' + ST[v].label);
+        else toast('⚠ المتصفح يمنع الحفظ الدائم؛ الحالة محفوظة مؤقتًا في هذه النافذة فقط', true);
+      });
+    }
+    else if (t.hasAttribute('data-login')) {
+      const pin = prompt('أدخل رمز المعلم:');
+      if (pin !== null) {
+        if (pin === TEACHER_PIN) {
+          teacher = true;
+          try { localStorage.setItem(TKEY, '1'); } catch (e) { /* تجاهل */ }
+          home(); toast('🔓 تم تفعيل وضع المعلم');
+        } else { toast('⚠ الرمز غير صحيح', true); }
+      }
+    }
+    else if (t.hasAttribute('data-logout')) {
+      teacher = false;
+      try { localStorage.removeItem(TKEY); } catch (e) { /* تجاهل */ }
+      home();
     }
     else if (t.dataset.fprog) { fProg = t.dataset.fprog; home(); }
     else if (t.dataset.fst) { fSt = t.dataset.fst; home(); }
@@ -317,6 +400,6 @@
     else prompt('انسخ الكود:', code);
   }
 
-  try { route(); }
+  try { route(); pull(); if (DB) { setInterval(pull, POLL_MS); document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); }); } }
   catch (err) { app.innerHTML = '<div class="panel">حدث خطأ في تشغيل المنصة: ' + err.message + '</div>'; }
 })();
