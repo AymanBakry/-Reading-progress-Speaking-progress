@@ -11,7 +11,10 @@
   /* ---------- الحالات المنشورة للجميع (عدّلها من هنا) ---------- */
   // القيم: 'none' لم يبدأ | 'doing' جاري التنفيذ | 'done' تم التنفيذ | 'postponed' تم التأجيل
   const STATUS_DEFAULT = {
-    // مثال: R1: 'done', R2: 'doing', S1: 'postponed'
+    "R1": "done",
+    "R2": "done",
+    "R3": "done",
+    "S1": "done"
   };
 
   const STORE = 'bp_status_2026_v1';
