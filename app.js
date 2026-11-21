@@ -2,8 +2,9 @@
    منصة Reading Progress & Speaking Progress 2026-2027
    - لتعديل الحالات للجميع: انسخ كود الحالات من زر "نسخ كود الحالات"
      والصقه مكان STATUS_DEFAULT أدناه ثم احفظ الملف في GitHub.
-   - لإضافة صور حقيقية: ضع صورة باسم r1.jpg ... r10.jpg أو s1.jpg ... s10.jpg
+   - لإضافة صور حقيقية: ضع صورة باسم r1.jpg ... r10.jpg أو s1.jpg ... s11.jpg
      داخل مجلد اسمه images بجانب index.html (اختياري).
+   - بعد دخول المعلم تظهر أزرار: إضافة نشاط / تعديل النشاط / حذف النشاط.
    ===================================================================== */
 (function () {
   'use strict';
@@ -84,9 +85,15 @@
     mk('S', 8, 'A Trip to the Zoo or Park', 'Story in 4 Pictures', 'يختار أو يرسم 4 صور ويروي قصة رحلة بتسلسل الأحداث مستخدمًا: First, Then, Next, Finally', '2027-01-15', '2027-01-31', BRK + ' ونُقل إلى أول يوم دراسي بعدها.', ['#16a34a', '#eab308', '#f97316'], ['🦁', '🐘', '🦒', '🌳', '🐒', '🐧', '🦓', '🐅']),
     mk('S', 9, 'A Family Day at the Beach', 'Picture Talk', 'يصف صورة ليوم عائلي على الشاطئ ويروي ما حدث فيه بالماضي البسيط', '2027-01-30', '2027-02-15', BRK + ' وانتقل إلى الموعد التالي.', ['#0ea5e9', '#facc15', '#14b8a6'], ['🏖️', '🌊', '🐚', '☀️', '🏐', '🦀', '⛱️', '🍉']),
     mk('S', 10, 'Four Seasons of the Year', 'Weather Presenter', 'يقدّم نشرة طقس لفصول السنة الأربعة ويقارن بينها بمفردات الطقس', '2027-02-15', '2027-02-28', FEB, ['#22c55e', '#f59e0b', '#3b82f6'], ['🌸', '☀️', '🍂', '❄️', '🌈', '🌧️', '⛄', '🍁']),
-      mk('S', 11, 'Speak about your Mobile Phone', 'Phone Talk', 'يتحدث عن هاتفه المحمول واستخداماته وفوائده وأضراره في 5 جمل مترابطة على الأقل', '2027-03-15', '2027-03-15', '', ['#0ea5e9', '#6366f1', '#f472b6'], ['📱', '💬', '🎧', '📷', '🔋', '🎮', '📶', '⌚'])];
+    mk('S', 11, 'Speak about your Mobile Phone', 'Phone Talk', 'يتحدث عن هاتفه المحمول واستخداماته وفوائده وأضراره في 5 جمل مترابطة على الأقل', '2027-03-15', '2027-03-15', '', ['#0ea5e9', '#6366f1', '#f472b6'], ['📱', '💬', '🎧', '📷', '🔋', '🎮', '📶', '⌚'])
+  ];
   const byId = {};
-  A.forEach(a => { byId[a.id] = a; });  const BASE = A.slice();
+  A.forEach(a => { byId[a.id] = a; });
+  const PROG = { R: 'Reading Progress', S: 'Speaking Progress' };
+  const PROG_ICON = { R: '📖', S: '🎤' };
+
+  /* ---------- الأنشطة المضافة أو المعدّلة من المعلم (تُحفظ على Firebase) ---------- */
+  const BASE = A.slice();
   let custom = {};
   function rebuild() {
     const list = BASE.map(a => Object.assign({}, a, custom[a.id] || {}));
@@ -99,8 +106,6 @@
     Object.keys(byId).forEach(k => { delete byId[k]; });
     A.forEach(a => { byId[a.id] = a; });
   }
-  const PROG = { R: 'Reading Progress', S: 'Speaking Progress' };
-  const PROG_ICON = { R: '📖', S: '🎤' };
 
   /* ---------- أدوات التاريخ ---------- */
   const MON = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -170,18 +175,20 @@
       remote = d;
       local = Object.assign({}, d);
       writeAll(local);
-      if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }      try {
-        const r2 = await fetch(DB + '/acts.json?t=' + Date.now(), { cache: 'no-store' });
-        if (r2.ok) {
-          const c = (await r2.json()) || {};
-          if (JSON.stringify(c) !== JSON.stringify(custom)) { custom = c; rebuild(); refresh(); }
-        }
-      } catch (e) { /* تجاهل */ }
+      if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }
     } catch (e) { /* يستمر بآخر نسخة محفوظة */ }
+    // الأنشطة المضافة أو المعدّلة
+    try {
+      const r2 = await fetch(DB + '/acts.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r2.ok) {
+        const c = (await r2.json()) || {};
+        if (JSON.stringify(c) !== JSON.stringify(custom)) { custom = c; rebuild(); refresh(); }
+      }
+    } catch (e) { /* تجاهل */ }
   }
   function refresh() {
     if (!app.innerHTML) return;
-    if (curId) detail(byId[curId]); else home();
+    if (curId && byId[curId]) detail(byId[curId]); else home();
   }
   function toast(msg, bad) {
     const t = document.createElement('div');
@@ -319,7 +326,7 @@
 
     app.innerHTML = nav +
       '<section class="hero"><div class="ph" id="heroPh"></div>' +
-      '<span class="prog">' + PROG_ICON[a.prog] + ' ' + PROG[a.prog] + ' – النشاط ' + a.n + '' من ' + list.length + '</span>' +
+      '<span class="prog">' + PROG_ICON[a.prog] + ' ' + PROG[a.prog] + ' – النشاط ' + a.n + ' من ' + list.length + '</span>' +
       '<h2 dir="ltr">' + a.topic + '</h2>' +
       (a.fmt ? '<div class="fmt" dir="ltr">' + a.fmt + '</div><br>' : '') +
       '<div class="emo">' + a.e.slice(0, 5).join(' ') + '</div>' +
@@ -338,9 +345,54 @@
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
       '<div class="note">معيار النجاح: تسليم 90 بالمئة من الطلاب، ومتوسط الدرجات 70 من 100 فأكثر.</div></section>' +
       '<section class="panel"><h3>👨‍🏫 الجهة المسؤولة</h3>المعلم المنفذ / أيمن بكري – المكان: منصة Teams</section>' +
-     
-          (teacher ? '<div class="tools"><button class="btn" data-editact>✏️ تعديل النشاط</button><button class="btn gray" data-delact>🗑️ حذف النشاط</button></div>' : '') +
+      (DB && teacher ? '<div class="tools"><button class="btn" data-editact>✏️ تعديل النشاط</button><button class="btn gray" data-delact>🗑️ حذف النشاط</button></div>' : '') +
       nav;
+
+    tryPhoto(a.id, u => { const h = document.getElementById('heroPh'); if (h) h.style.backgroundImage = u; });
+  }
+
+  /* ---------- إضافة وتعديل وحذف الأنشطة (للمعلم) ---------- */
+  async function saveAct(id, data) {
+    custom[id] = Object.assign({}, custom[id] || {}, data);
+    rebuild();
+    try {
+      const r = await fetch(DB + '/acts/' + id + '.json', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(custom[id])
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      toast('✔ تم الحفظ ويظهر على كل الأجهزة');
+    } catch (e) {
+      toast('⚠ تعذر الحفظ على الإنترنت', true);
+    }
+    refresh();
+  }
+  function addAct() {
+    const prog = (prompt('النوع: اكتب R لـ Reading أو S لـ Speaking', 'S') || '').toUpperCase();
+    if (prog !== 'R' && prog !== 'S') return;
+    const n = A.filter(x => x.prog === prog).reduce((m, x) => Math.max(m, x.n), 0) + 1;
+    const topic = prompt('اسم النشاط (بالإنجليزية):');
+    if (!topic) return;
+    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15 :');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
+    const task = prompt('وصف مهمة الطالب:', '') || '';
+    saveAct(prog + n, { id: prog + n, prog: prog, n: n, topic: topic, task: task, planned: date, date: date });
+    location.hash = '#/a/' + prog + n;
+  }
+  function editAct(a) {
+    const topic = prompt('اسم النشاط:', a.topic);
+    if (topic === null) return;
+    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15 :', a.date);
+    if (date === null) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
+    const task = prompt('وصف مهمة الطالب:', a.task);
+    if (task === null) return;
+    saveAct(a.id, { topic: topic, date: date, task: task });
+  }
+  function delAct(a) {
+    if (!confirm('حذف هذا النشاط؟')) return;
+    saveAct(a.id, { del: true });
+    location.hash = '#/';
+  }
 
   /* ---------- التوجيه ---------- */
   function route() {
@@ -352,12 +404,9 @@
 
   /* ---------- الأحداث ---------- */
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]';
+    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]');
     if (!t || t.disabled) return;
-    if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }   
-    else if (t.hasAttribute('data-addact')) { addAct(); }
-    else if (t.hasAttribute('data-editact')) { editAct(byId[curId]); }
-    else if (t.hasAttribute('data-delact')) { delAct(byId[curId]); }
+    if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
     else if (t.dataset.set && curId && canEdit()) {
       const id = curId, v = t.dataset.set;
@@ -372,6 +421,9 @@
         else toast('⚠ المتصفح يمنع الحفظ الدائم؛ الحالة محفوظة مؤقتًا في هذه النافذة فقط', true);
       });
     }
+    else if (t.hasAttribute('data-addact') && teacher) { addAct(); }
+    else if (t.hasAttribute('data-editact') && teacher && curId) { editAct(byId[curId]); }
+    else if (t.hasAttribute('data-delact') && teacher && curId) { delAct(byId[curId]); }
     else if (t.hasAttribute('data-login')) {
       const pin = prompt('أدخل رمز المعلم:');
       if (pin !== null) {
@@ -403,46 +455,14 @@
     if (ev.key === 'Enter') { const c = ev.target.closest('[data-go]'); if (c) location.hash = '#/a/' + c.dataset.go; }
   });
   document.addEventListener('keydown', ev => {
-    if (!curId) return;
+    if (!curId || !byId[curId]) return;
     const list = A.filter(x => x.prog === byId[curId].prog);
     const i = list.indexOf(byId[curId]);
     if (ev.key === 'ArrowLeft' && list[i + 1]) location.hash = '#/a/' + list[i + 1].id;   // التالي
     else if (ev.key === 'ArrowRight' && list[i - 1]) location.hash = '#/a/' + list[i - 1].id; // السابق
     else if (ev.key === 'Escape') location.hash = '#/';
   });
-  async function saveAct(id, data) {
-    custom[id] = Object.assign({}, custom[id] || {}, data);
-    rebuild();
-    try {
-      const r = await fetch(DB + '/acts/' + id + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(custom[id]) });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      toast('✔ تم الحفظ ويظهر على كل الأجهزة');
-    } catch (e) { toast('⚠ تعذر الحفظ على الإنترنت', true); }
-    refresh();
-  }
-  function addAct() {
-    const prog = (prompt('النوع: اكتب R لـ Reading أو S لـ Speaking', 'S') || '').toUpperCase();
-    if (prog !== 'R' && prog !== 'S') return;
-    const n = A.filter(x => x.prog === prog).reduce((m, x) => Math.max(m, x.n), 0) + 1;
-    const topic = prompt('اسم النشاط (بالإنجليزية):'); if (!topic) return;
-    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15:');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
-    const task = prompt('وصف مهمة الطالب:', '') || '';
-    saveAct(prog + n, { id: prog + n, prog: prog, n: n, topic: topic, task: task, planned: date, date: date });
-    location.hash = '#/a/' + prog + n;
-  }
-  function editAct(a) {
-    const topic = prompt('اسم النشاط:', a.topic); if (topic === null) return;
-    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15:', a.date); if (date === null) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
-    const task = prompt('وصف مهمة الطالب:', a.task); if (task === null) return;
-    saveAct(a.id, { topic: topic, date: date, task: task });
-  }
-  function delAct(a) {
-    if (!confirm('حذف هذا النشاط؟')) return;
-    saveAct(a.id, { del: true });
-    location.hash = '#/';
-  }
+
   function copyStatus() {
     const o = {};
     A.forEach(a => { const s = getS(a.id); if (s !== 'none') o[a.id] = s; });
