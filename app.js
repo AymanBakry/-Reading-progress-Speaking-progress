@@ -1,10 +1,9 @@
 /* =====================================================================
    منصة Reading Progress & Speaking Progress 2026-2027
-   - لتعديل الحالات للجميع: انسخ كود الحالات من زر "نسخ كود الحالات"
-     والصقه مكان STATUS_DEFAULT أدناه ثم احفظ الملف في GitHub.
+   - لتغيير حالة أي نشاط: عدّل STATUS_DEFAULT أدناه ثم احفظ الملف في GitHub.
+   - لإضافة نشاط جديد: انسخ آخر سطر mk(...) في قائمة A وغيّر بياناته.
    - لإضافة صور حقيقية: ضع صورة باسم r1.jpg ... r10.jpg أو s1.jpg ... s11.jpg
      داخل مجلد اسمه images بجانب index.html (اختياري).
-   - بعد دخول المعلم تظهر أزرار: إضافة نشاط / تعديل النشاط / حذف النشاط.
    ===================================================================== */
 (function () {
   'use strict';
@@ -15,15 +14,16 @@
     "R1": "done",
     "R2": "done",
     "R3": "done",
-    "S1": "done"
+    "R4": "doing",
+    "S1": "done",
+    "S2": "done",
+    "S3": "doing"
   };
 
-  /* ---------- إعدادات المزامنة بين الأجهزة ---------- */
-  // ضع رابط قاعدة Firebase Realtime Database بين علامتي التنصيص لتظهر الحالات على كل الأجهزة تلقائيًا.
-  // إذا تركته فارغًا تعمل المنصة بدون مزامنة (الحالة تُحفظ على الجهاز فقط).
-  const DB_URL = 'https://reading-and-speaking-plan-default-rtdb.firebaseio.com';
-  const TEACHER_PIN = '1234';   // رمز المعلم لإظهار أزرار تغيير الحالة (غيّره إلى رمز خاص بك)
-  const POLL_MS = 20000;        // تحديث الحالات تلقائيًا كل 20 ثانية
+  /* ---------- إعدادات المزامنة (متوقفة) ---------- */
+  const DB_URL = '';
+  const TEACHER_PIN = '1234';
+  const POLL_MS = 20000;
   const DB = DB_URL ? DB_URL.replace(/\/+$/, '') : '';
 
   const STORE = 'bp_status_2026_v1';
@@ -133,7 +133,7 @@
     return ok;
   }
   let local = readAll();
-  let remote = null;                       // null = لم تُحمَّل بعد من الإنترنت
+  let remote = null;
   let teacher = false;
   try { teacher = localStorage.getItem(TKEY) === '1'; } catch (e) { teacher = false; }
   const canEdit = () => !DB || teacher;
@@ -141,7 +141,7 @@
   function getS(id) {
     if (DB) {
       if (remote && remote[id]) return remote[id];
-      if (remote === null && local[id]) return local[id];   // نسخة محفوظة عند تعذر الاتصال
+      if (remote === null && local[id]) return local[id];
     } else if (local[id]) {
       return local[id];
     }
@@ -177,7 +177,6 @@
       writeAll(local);
       if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }
     } catch (e) { /* يستمر بآخر نسخة محفوظة */ }
-    // الأنشطة المضافة أو المعدّلة
     try {
       const r2 = await fetch(DB + '/acts.json?t=' + Date.now(), { cache: 'no-store' });
       if (r2.ok) {
@@ -283,7 +282,7 @@
       '<div class="filters">' + progTabs + '</div><div class="filters">' + stTabs + '</div>' + body +
       '<div class="tools">' + (DB
         ? (teacher ? '<button class="btn" data-addact>➕ إضافة نشاط</button><button class="btn gray" data-logout>🔓 خروج المعلم</button>' : '<button class="btn gray" data-login>🔒 دخول المعلم</button>')
-        : '<button class="btn" data-copy>📋 نسخ كود الحالات للنشر</button><button class="btn gray" data-reset>🧹 مسح تعديلاتي</button>') + '</div>';
+        : '') + '</div>';
 
     app.querySelectorAll('.ph').forEach(el => tryPhoto(el.dataset.ph, u => { el.style.backgroundImage = u; }));
   }
@@ -303,13 +302,7 @@
       '<button class="btn home" data-home>🏠 القائمة الرئيسية</button>' +
       '<button class="btn" ' + (next ? 'data-go="' + next.id + '"' : 'disabled') + '>التالي ←</button></div>';
 
-    const stBtns = Object.keys(ST).map(k =>
-      '<button class="stbtn s-' + k + (s === k ? ' active' : '') + '" data-set="' + k + '">' + ST[k].icon + ' ' + ST[k].label + '</button>').join('');
-    const stPanel = canEdit()
-      ? '<div class="stwrap">' + stBtns + '</div><div class="note">' +
-        (DB ? 'عند الضغط تُحفظ الحالة على الإنترنت وتظهر لكل من يفتح المنصة على أي جهاز.'
-            : 'تُحفظ الحالة على هذا الجهاز فقط. لنشرها للجميع اضبط DB_URL في app.js.') + '</div>'
-      : '<div class="stwrap"><span class="badge s-' + s + '" style="font-size:1.1rem;padding:6px 18px">' + ST[s].icon + ' ' + ST[s].label + '</span></div>';
+    const stPanel = '<div class="stwrap"><span class="badge s-' + s + '" style="font-size:1.1rem;padding:6px 18px">' + ST[s].icon + ' ' + ST[s].label + '</span></div>';
 
     const steps = [
       'إطلاق النشاط: نشر مهمة في Teams (Assignments) مع مجلد الموضوع رقم ' + a.n + ' وتعليمات التسجيل، وآخر موعد للتسليم بعد 12 يومًا من الإطلاق.',
@@ -351,7 +344,7 @@
     tryPhoto(a.id, u => { const h = document.getElementById('heroPh'); if (h) h.style.backgroundImage = u; });
   }
 
-  /* ---------- إضافة وتعديل وحذف الأنشطة (للمعلم) ---------- */
+  /* ---------- إضافة وتعديل وحذف الأنشطة (تعمل فقط عند تفعيل Firebase) ---------- */
   async function saveAct(id, data) {
     custom[id] = Object.assign({}, custom[id] || {}, data);
     rebuild();
@@ -404,23 +397,10 @@
 
   /* ---------- الأحداث ---------- */
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]');
+    const t = ev.target.closest('[data-go],[data-home],[data-fprog],[data-fst],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]');
     if (!t || t.disabled) return;
     if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
-    else if (t.dataset.set && curId && canEdit()) {
-      const id = curId, v = t.dataset.set;
-      const p = saveStatus(id, v);
-      detail(byId[id]);
-      if (v === 'done') confetti(byId[id].e);
-      p.then(res => {
-        if (DB) {
-          if (res.remote) toast('✔ تم الحفظ ويظهر الآن على كل الأجهزة: ' + ST[v].label);
-          else toast('⚠ تعذر الاتصال بقاعدة البيانات؛ حُفظت على هذا الجهاز فقط', true);
-        } else if (res.local) toast('✔ تم حفظ الحالة: ' + ST[v].label);
-        else toast('⚠ المتصفح يمنع الحفظ الدائم؛ الحالة محفوظة مؤقتًا في هذه النافذة فقط', true);
-      });
-    }
     else if (t.hasAttribute('data-addact') && teacher) { addAct(); }
     else if (t.hasAttribute('data-editact') && teacher && curId) { editAct(byId[curId]); }
     else if (t.hasAttribute('data-delact') && teacher && curId) { delAct(byId[curId]); }
@@ -441,15 +421,6 @@
     }
     else if (t.dataset.fprog) { fProg = t.dataset.fprog; home(); }
     else if (t.dataset.fst) { fSt = t.dataset.fst; home(); }
-    else if (t.hasAttribute('data-copy')) { copyStatus(); }
-    else if (t.hasAttribute('data-reset')) {
-      if (confirm('سيتم مسح الحالات المحفوظة في هذا المتصفح فقط. هل أنت متأكد؟')) {
-        local = {};
-        writeAll(local);
-        try { localStorage.removeItem(STORE); } catch (e) { /* تجاهل */ }
-        home();
-      }
-    }
   });
   app.addEventListener('keydown', ev => {
     if (ev.key === 'Enter') { const c = ev.target.closest('[data-go]'); if (c) location.hash = '#/a/' + c.dataset.go; }
@@ -458,19 +429,10 @@
     if (!curId || !byId[curId]) return;
     const list = A.filter(x => x.prog === byId[curId].prog);
     const i = list.indexOf(byId[curId]);
-    if (ev.key === 'ArrowLeft' && list[i + 1]) location.hash = '#/a/' + list[i + 1].id;   // التالي
-    else if (ev.key === 'ArrowRight' && list[i - 1]) location.hash = '#/a/' + list[i - 1].id; // السابق
+    if (ev.key === 'ArrowLeft' && list[i + 1]) location.hash = '#/a/' + list[i + 1].id;
+    else if (ev.key === 'ArrowRight' && list[i - 1]) location.hash = '#/a/' + list[i - 1].id;
     else if (ev.key === 'Escape') location.hash = '#/';
   });
-
-  function copyStatus() {
-    const o = {};
-    A.forEach(a => { const s = getS(a.id); if (s !== 'none') o[a.id] = s; });
-    const code = 'const STATUS_DEFAULT = ' + JSON.stringify(o, null, 2) + ';';
-    const ok = () => alert('تم نسخ الكود. افتح ملف app.js في GitHub واستبدل به سطر STATUS_DEFAULT ثم احفظ التعديل.');
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, () => prompt('انسخ الكود:', code));
-    else prompt('انسخ الكود:', code);
-  }
 
   try { route(); pull(); if (DB) { setInterval(pull, POLL_MS); document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); }); } }
   catch (err) { app.innerHTML = '<div class="panel">حدث خطأ في تشغيل المنصة: ' + err.message + '</div>'; }
