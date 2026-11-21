@@ -1,9 +1,8 @@
 /* =====================================================================
    منصة Reading Progress & Speaking Progress 2026-2027
-   - لتغيير حالة أي نشاط: عدّل STATUS_DEFAULT أدناه ثم احفظ الملف في GitHub.
+   - اضغط "دخول المعلم" أسفل الصفحة الرئيسية (الرمز 1234) لتظهر أزرار تغيير الحالة.
+   - الحالات المحفوظة داخل الملف: STATUS_DEFAULT (تظهر للجميع دائمًا).
    - لإضافة نشاط جديد: انسخ آخر سطر mk(...) في قائمة A وغيّر بياناته.
-   - لإضافة صور حقيقية: ضع صورة باسم r1.jpg ... r10.jpg أو s1.jpg ... s11.jpg
-     داخل مجلد اسمه images بجانب index.html (اختياري).
    ===================================================================== */
 (function () {
   'use strict';
@@ -21,8 +20,8 @@
     "S11": "doing"
   };
 
-  /* ---------- إعدادات المزامنة (متوقفة) ---------- */
-  const DB_URL = '';
+  /* ---------- إعدادات المزامنة بين الأجهزة ---------- */
+  const DB_URL = 'https://reading-and-speaking-plan-default-rtdb.firebaseio.com';
   const TEACHER_PIN = '1234';
   const POLL_MS = 20000;
   const DB = DB_URL ? DB_URL.replace(/\/+$/, '') : '';
@@ -93,7 +92,7 @@
   const PROG = { R: 'Reading Progress', S: 'Speaking Progress' };
   const PROG_ICON = { R: '📖', S: '🎤' };
 
-  /* ---------- الأنشطة المضافة أو المعدّلة من المعلم (تُحفظ على Firebase) ---------- */
+  /* ---------- الأنشطة المضافة أو المعدّلة من المعلم ---------- */
   const BASE = A.slice();
   let custom = {};
   function rebuild() {
@@ -137,15 +136,11 @@
   let remote = null;
   let teacher = false;
   try { teacher = localStorage.getItem(TKEY) === '1'; } catch (e) { teacher = false; }
-  const canEdit = () => !DB || teacher;
+  const canEdit = () => teacher;
 
   function getS(id) {
-    if (DB) {
-      if (remote && remote[id]) return remote[id];
-      if (remote === null && local[id]) return local[id];
-    } else if (local[id]) {
-      return local[id];
-    }
+    if (remote && remote[id]) return remote[id];
+    if (teacher && local[id]) return local[id];
     return STATUS_DEFAULT[id] || 'none';
   }
   async function saveStatus(id, v) {
@@ -174,10 +169,8 @@
       const snap = JSON.stringify(d);
       const first = remote === null;
       remote = d;
-      local = Object.assign({}, d);
-      writeAll(local);
       if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }
-    } catch (e) { /* يستمر بآخر نسخة محفوظة */ }
+    } catch (e) { /* يستمر بالحالات المكتوبة في الملف */ }
     try {
       const r2 = await fetch(DB + '/acts.json?t=' + Date.now(), { cache: 'no-store' });
       if (r2.ok) {
@@ -195,7 +188,7 @@
     t.textContent = msg;
     t.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99;padding:10px 20px;border-radius:99px;font-weight:800;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.3);background:' + (bad ? '#dc2626' : '#16a34a');
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2800);
+    setTimeout(() => t.remove(), 3600);
   }
 
   /* ---------- عناصر الصفحة ---------- */
@@ -281,9 +274,9 @@
       '<div class="stat"><b>' + cnt.none + '</b><span>⚪ لم يبدأ</span></div></section>' +
       '<div class="progress"><i style="width:' + pct + '%"></i><em>' + pct + '% من الأنشطة منفذة</em></div>' +
       '<div class="filters">' + progTabs + '</div><div class="filters">' + stTabs + '</div>' + body +
-      '<div class="tools">' + (DB
-        ? (teacher ? '<button class="btn" data-addact>➕ إضافة نشاط</button><button class="btn gray" data-logout>🔓 خروج المعلم</button>' : '<button class="btn gray" data-login>🔒 دخول المعلم</button>')
-        : '') + '</div>';
+      '<div class="tools">' + (teacher
+        ? '<button class="btn" data-addact>➕ إضافة نشاط</button><button class="btn" data-copy>📋 نسخ كود الحالات</button><button class="btn gray" data-logout>🔓 خروج المعلم</button>'
+        : '<button class="btn gray" data-login>🔒 دخول المعلم</button>') + '</div>';
 
     app.querySelectorAll('.ph').forEach(el => tryPhoto(el.dataset.ph, u => { el.style.backgroundImage = u; }));
   }
@@ -303,7 +296,11 @@
       '<button class="btn home" data-home>🏠 القائمة الرئيسية</button>' +
       '<button class="btn" ' + (next ? 'data-go="' + next.id + '"' : 'disabled') + '>التالي ←</button></div>';
 
-    const stPanel = '<div class="stwrap"><span class="badge s-' + s + '" style="font-size:1.1rem;padding:6px 18px">' + ST[s].icon + ' ' + ST[s].label + '</span></div>';
+    const stBtns = Object.keys(ST).map(k =>
+      '<button class="stbtn s-' + k + (s === k ? ' active' : '') + '" data-set="' + k + '">' + ST[k].icon + ' ' + ST[k].label + '</button>').join('');
+    const stPanel = canEdit()
+      ? '<div class="stwrap">' + stBtns + '</div><div class="note">اضغط على الحالة المطلوبة، وتُحفظ ليراها الجميع.</div>'
+      : '<div class="stwrap"><span class="badge s-' + s + '" style="font-size:1.1rem;padding:6px 18px">' + ST[s].icon + ' ' + ST[s].label + '</span></div>';
 
     const steps = [
       'إطلاق النشاط: نشر مهمة في Teams (Assignments) مع مجلد الموضوع رقم ' + a.n + ' وتعليمات التسجيل، وآخر موعد للتسليم بعد 12 يومًا من الإطلاق.',
@@ -326,6 +323,8 @@
       '<div class="emo">' + a.e.slice(0, 5).join(' ') + '</div>' +
       '<span class="badge s-' + s + '" id="heroBadge">' + ST[s].icon + ' ' + ST[s].label + '</span></section>' +
 
+      '<section class="panel"><h3>🚦 حالة النشاط</h3>' + stPanel + '</section>' +
+
       '<section class="panel"><h3>📅 المواعيد</h3><div class="tiles">' +
       '<div class="tile"><b>🚀 موعد الإطلاق</b>' + full(a.date) +
       (a.planned !== a.date ? '<small>الموعد وفق النمط: ' + mid(a.planned) + '</small>' : '') + '</div>' +
@@ -333,19 +332,18 @@
       '<div class="tile"><b>📝 التقييم والتغذية الراجعة</b>من ' + mid(dl) + '<small>حتى ' + mid(ev) + '</small></div></div>' +
       (a.note ? '<div class="note">⚠️ ' + a.note + '</div>' : '') + '</section>' +
 
-      '<section class="panel"><h3>🚦 حالة النشاط</h3>' + stPanel + '</section>' +
       '<section class="panel"><h3>🧭 خطوات التنفيذ</h3><ol class="steps">' + steps + '</ol></section>' +
       '<section class="panel"><h3>💡 نصائح للطالب</h3><ul class="tips">' + TIPS[a.prog].map(t => '<li>' + t + '</li>').join('') + '</ul></section>' +
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
       '<div class="note">معيار النجاح: تسليم 90 بالمئة من الطلاب، ومتوسط الدرجات 70 من 100 فأكثر.</div></section>' +
       '<section class="panel"><h3>👨‍🏫 الجهة المسؤولة</h3>المعلم المنفذ / أيمن بكري – المكان: منصة Teams</section>' +
-      (DB && teacher ? '<div class="tools"><button class="btn" data-editact>✏️ تعديل النشاط</button><button class="btn gray" data-delact>🗑️ حذف النشاط</button></div>' : '') +
+      (teacher ? '<div class="tools"><button class="btn" data-editact>✏️ تعديل النشاط</button><button class="btn gray" data-delact>🗑️ حذف النشاط</button></div>' : '') +
       nav;
 
     tryPhoto(a.id, u => { const h = document.getElementById('heroPh'); if (h) h.style.backgroundImage = u; });
   }
 
-  /* ---------- إضافة وتعديل وحذف الأنشطة (تعمل فقط عند تفعيل Firebase) ---------- */
+  /* ---------- إضافة وتعديل وحذف الأنشطة (للمعلم) ---------- */
   async function saveAct(id, data) {
     custom[id] = Object.assign({}, custom[id] || {}, data);
     rebuild();
@@ -388,6 +386,16 @@
     location.hash = '#/';
   }
 
+  /* ---------- نسخ كود الحالات للصقه في STATUS_DEFAULT ---------- */
+  function copyStatus() {
+    const o = {};
+    A.forEach(a => { const s = getS(a.id); if (s !== 'none') o[a.id] = s; });
+    const code = 'const STATUS_DEFAULT = ' + JSON.stringify(o, null, 2) + ';';
+    const ok = () => alert('تم نسخ الكود. افتح app.js في GitHub واستبدل به كتلة STATUS_DEFAULT ثم احفظ.');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, () => prompt('انسخ الكود:', code));
+    else prompt('انسخ الكود:', code);
+  }
+
   /* ---------- التوجيه ---------- */
   function route() {
     const m = location.hash.match(/^#\/a\/([RS]\d+)$/);
@@ -398,10 +406,21 @@
 
   /* ---------- الأحداث ---------- */
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-go],[data-home],[data-fprog],[data-fst],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]');
+    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]');
     if (!t || t.disabled) return;
     if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
+    else if (t.dataset.set && curId && canEdit()) {
+      const id = curId, v = t.dataset.set;
+      const p = saveStatus(id, v);
+      detail(byId[id]);
+      if (v === 'done') confetti(byId[id].e);
+      p.then(res => {
+        if (res.remote) toast('✔ تم الحفظ ويظهر الآن على كل الأجهزة: ' + ST[v].label);
+        else toast('⚠ حُفظت على جهازك فقط. لنشرها للجميع اضغط "نسخ كود الحالات" في الرئيسية والصقه في app.js', true);
+      });
+    }
+    else if (t.hasAttribute('data-copy') && teacher) { copyStatus(); }
     else if (t.hasAttribute('data-addact') && teacher) { addAct(); }
     else if (t.hasAttribute('data-editact') && teacher && curId) { editAct(byId[curId]); }
     else if (t.hasAttribute('data-delact') && teacher && curId) { delAct(byId[curId]); }
