@@ -61,7 +61,7 @@
   const mk = (prog, n, topic, fmt, task, planned, date, note, g, e) =>
     ({ id: prog + n, prog, n, topic, fmt, task, planned, date, note, g, e });
 
-  const A = [
+  let A = [
     // ---------- Reading Progress ----------
     mk('R', 1, 'Sports', '', 'وضوح الصوت ونطق الكلمات الصعبة', '2026-09-15', '2026-09-15', '', ['#16a34a', '#f59e0b', '#0ea5e9'], ['⚽', '🏀', '🏐', '🎾', '🏈', '🏆', '🥇', '⛹️']),
     mk('R', 2, 'Health', '', 'الطلاقة وتجنب التوقف المتكرر', '2026-09-30', '2026-09-30', '', ['#0ea5a4', '#22c55e', '#3b82f6'], ['🩺', '💧', '🏃', '🍎', '😴', '🦷', '💪', '🧘']),
@@ -83,10 +83,22 @@
     mk('S', 7, 'My Favourite Hobby', 'Hobby Show & Tell', 'يعرض أداة أو صورة لهوايته ويشرح كيف يمارسها وكم مرة ولماذا يحبها', '2026-12-30', '2026-12-30', '', ['#8b5cf6', '#ec4899', '#06b6d4'], ['🎨', '🎸', '📷', '🧩', '🎮', '♟️', '📚', '🎹']),
     mk('S', 8, 'A Trip to the Zoo or Park', 'Story in 4 Pictures', 'يختار أو يرسم 4 صور ويروي قصة رحلة بتسلسل الأحداث مستخدمًا: First, Then, Next, Finally', '2027-01-15', '2027-01-31', BRK + ' ونُقل إلى أول يوم دراسي بعدها.', ['#16a34a', '#eab308', '#f97316'], ['🦁', '🐘', '🦒', '🌳', '🐒', '🐧', '🦓', '🐅']),
     mk('S', 9, 'A Family Day at the Beach', 'Picture Talk', 'يصف صورة ليوم عائلي على الشاطئ ويروي ما حدث فيه بالماضي البسيط', '2027-01-30', '2027-02-15', BRK + ' وانتقل إلى الموعد التالي.', ['#0ea5e9', '#facc15', '#14b8a6'], ['🏖️', '🌊', '🐚', '☀️', '🏐', '🦀', '⛱️', '🍉']),
-    mk('S', 10, 'Four Seasons of the Year', 'Weather Presenter', 'يقدّم نشرة طقس لفصول السنة الأربعة ويقارن بينها بمفردات الطقس', '2027-02-15', '2027-02-28', FEB, ['#22c55e', '#f59e0b', '#3b82f6'], ['🌸', '☀️', '🍂', '❄️', '🌈', '🌧️', '⛄', '🍁'])
-  ];
+    mk('S', 10, 'Four Seasons of the Year', 'Weather Presenter', 'يقدّم نشرة طقس لفصول السنة الأربعة ويقارن بينها بمفردات الطقس', '2027-02-15', '2027-02-28', FEB, ['#22c55e', '#f59e0b', '#3b82f6'], ['🌸', '☀️', '🍂', '❄️', '🌈', '🌧️', '⛄', '🍁']),
+      mk('S', 11, 'Speak about your Mobile Phone', 'Phone Talk', 'يتحدث عن هاتفه المحمول واستخداماته وفوائده وأضراره في 5 جمل مترابطة على الأقل', '2027-03-15', '2027-03-15', '', ['#0ea5e9', '#6366f1', '#f472b6'], ['📱', '💬', '🎧', '📷', '🔋', '🎮', '📶', '⌚'])];
   const byId = {};
-  A.forEach(a => { byId[a.id] = a; });
+  A.forEach(a => { byId[a.id] = a; });  const BASE = A.slice();
+  let custom = {};
+  function rebuild() {
+    const list = BASE.map(a => Object.assign({}, a, custom[a.id] || {}));
+    Object.keys(custom).forEach(id => {
+      if (!BASE.some(b => b.id === id) && custom[id] && custom[id].topic) {
+        list.push(Object.assign({ g: ['#6C63FF', '#FF6584', '#FFC75F'], e: ['⭐', '🎤', '📖', '🎧', '✏️', '🌟', '🎓', '🏅'], fmt: '', note: '' }, custom[id]));
+      }
+    });
+    A = list.filter(a => !a.del).sort((x, y) => x.prog === y.prog ? x.n - y.n : (x.prog < y.prog ? -1 : 1));
+    Object.keys(byId).forEach(k => { delete byId[k]; });
+    A.forEach(a => { byId[a.id] = a; });
+  }
   const PROG = { R: 'Reading Progress', S: 'Speaking Progress' };
   const PROG_ICON = { R: '📖', S: '🎤' };
 
@@ -158,7 +170,13 @@
       remote = d;
       local = Object.assign({}, d);
       writeAll(local);
-      if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }
+      if (first || snap !== lastSnap) { lastSnap = snap; refresh(); }      try {
+        const r2 = await fetch(DB + '/acts.json?t=' + Date.now(), { cache: 'no-store' });
+        if (r2.ok) {
+          const c = (await r2.json()) || {};
+          if (JSON.stringify(c) !== JSON.stringify(custom)) { custom = c; rebuild(); refresh(); }
+        }
+      } catch (e) { /* تجاهل */ }
     } catch (e) { /* يستمر بآخر نسخة محفوظة */ }
   }
   function refresh() {
@@ -254,10 +272,10 @@
       '<div class="stat"><b>' + cnt.doing + '</b><span>⏳ جاري التنفيذ</span></div>' +
       '<div class="stat"><b>' + cnt.postponed + '</b><span>⏸️ تم التأجيل</span></div>' +
       '<div class="stat"><b>' + cnt.none + '</b><span>⚪ لم يبدأ</span></div></section>' +
-      '<div class="progress"><i style="width:' + pct + '%"></i><em>' + pct + '% من الأنشطة العشرين منفذة</em></div>' +
+      '<div class="progress"><i style="width:' + pct + '%"></i><em>' + pct + '% من الأنشطة منفذة</em></div>' +
       '<div class="filters">' + progTabs + '</div><div class="filters">' + stTabs + '</div>' + body +
       '<div class="tools">' + (DB
-        ? (teacher ? '<button class="btn gray" data-logout>🔓 خروج المعلم</button>' : '<button class="btn gray" data-login>🔒 دخول المعلم</button>')
+        ? (teacher ? '<button class="btn" data-addact>➕ إضافة نشاط</button><button class="btn gray" data-logout>🔓 خروج المعلم</button>' : '<button class="btn gray" data-login>🔒 دخول المعلم</button>')
         : '<button class="btn" data-copy>📋 نسخ كود الحالات للنشر</button><button class="btn gray" data-reset>🧹 مسح تعديلاتي</button>') + '</div>';
 
     app.querySelectorAll('.ph').forEach(el => tryPhoto(el.dataset.ph, u => { el.style.backgroundImage = u; }));
@@ -301,7 +319,7 @@
 
     app.innerHTML = nav +
       '<section class="hero"><div class="ph" id="heroPh"></div>' +
-      '<span class="prog">' + PROG_ICON[a.prog] + ' ' + PROG[a.prog] + ' – النشاط ' + a.n + ' من 10</span>' +
+      '<span class="prog">' + PROG_ICON[a.prog] + ' ' + PROG[a.prog] + ' – النشاط ' + a.n + '' من ' + list.length + '</span>' +
       '<h2 dir="ltr">' + a.topic + '</h2>' +
       (a.fmt ? '<div class="fmt" dir="ltr">' + a.fmt + '</div><br>' : '') +
       '<div class="emo">' + a.e.slice(0, 5).join(' ') + '</div>' +
@@ -320,10 +338,9 @@
       '<section class="panel"><h3>🏅 بطاقة التقييم (من 100)</h3>' + rubHtml +
       '<div class="note">معيار النجاح: تسليم 90 بالمئة من الطلاب، ومتوسط الدرجات 70 من 100 فأكثر.</div></section>' +
       '<section class="panel"><h3>👨‍🏫 الجهة المسؤولة</h3>المعلم المنفذ / أيمن بكري – المكان: منصة Teams</section>' +
+     
+          (teacher ? '<div class="tools"><button class="btn" data-editact>✏️ تعديل النشاط</button><button class="btn gray" data-delact>🗑️ حذف النشاط</button></div>' : '') +
       nav;
-
-    tryPhoto(a.id, u => { const h = document.getElementById('heroPh'); if (h) h.style.backgroundImage = u; });
-  }
 
   /* ---------- التوجيه ---------- */
   function route() {
@@ -335,9 +352,12 @@
 
   /* ---------- الأحداث ---------- */
   app.addEventListener('click', ev => {
-    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout]');
+    const t = ev.target.closest('[data-go],[data-home],[data-set],[data-fprog],[data-fst],[data-copy],[data-reset],[data-login],[data-logout],[data-addact],[data-editact],[data-delact]';
     if (!t || t.disabled) return;
-    if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }
+    if (t.dataset.go) { location.hash = '#/a/' + t.dataset.go; }   
+    else if (t.hasAttribute('data-addact')) { addAct(); }
+    else if (t.hasAttribute('data-editact')) { editAct(byId[curId]); }
+    else if (t.hasAttribute('data-delact')) { delAct(byId[curId]); }
     else if (t.hasAttribute('data-home')) { location.hash = '#/'; }
     else if (t.dataset.set && curId && canEdit()) {
       const id = curId, v = t.dataset.set;
@@ -390,7 +410,39 @@
     else if (ev.key === 'ArrowRight' && list[i - 1]) location.hash = '#/a/' + list[i - 1].id; // السابق
     else if (ev.key === 'Escape') location.hash = '#/';
   });
-
+  async function saveAct(id, data) {
+    custom[id] = Object.assign({}, custom[id] || {}, data);
+    rebuild();
+    try {
+      const r = await fetch(DB + '/acts/' + id + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(custom[id]) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      toast('✔ تم الحفظ ويظهر على كل الأجهزة');
+    } catch (e) { toast('⚠ تعذر الحفظ على الإنترنت', true); }
+    refresh();
+  }
+  function addAct() {
+    const prog = (prompt('النوع: اكتب R لـ Reading أو S لـ Speaking', 'S') || '').toUpperCase();
+    if (prog !== 'R' && prog !== 'S') return;
+    const n = A.filter(x => x.prog === prog).reduce((m, x) => Math.max(m, x.n), 0) + 1;
+    const topic = prompt('اسم النشاط (بالإنجليزية):'); if (!topic) return;
+    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15:');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
+    const task = prompt('وصف مهمة الطالب:', '') || '';
+    saveAct(prog + n, { id: prog + n, prog: prog, n: n, topic: topic, task: task, planned: date, date: date });
+    location.hash = '#/a/' + prog + n;
+  }
+  function editAct(a) {
+    const topic = prompt('اسم النشاط:', a.topic); if (topic === null) return;
+    const date = prompt('موعد الإطلاق بالصيغة 2027-03-15:', a.date); if (date === null) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('⚠ صيغة التاريخ غير صحيحة', true); return; }
+    const task = prompt('وصف مهمة الطالب:', a.task); if (task === null) return;
+    saveAct(a.id, { topic: topic, date: date, task: task });
+  }
+  function delAct(a) {
+    if (!confirm('حذف هذا النشاط؟')) return;
+    saveAct(a.id, { del: true });
+    location.hash = '#/';
+  }
   function copyStatus() {
     const o = {};
     A.forEach(a => { const s = getS(a.id); if (s !== 'none') o[a.id] = s; });
